@@ -5,6 +5,7 @@
 #include <QtWidgets>
 #include <QtNetwork>
 #include <QUrl>
+#include <QMessageBox>
 
 //===================================================================================================================//
 
@@ -31,11 +32,12 @@ void ProgressDialog::networkReplyProgress(qint64 bytesRead, qint64 totalBytes)
 
 YoutubeModel::YoutubeModel(QWidget* parent)
     : QDialog{ parent }
-    , youtube{ QString{} }
+    , youtube{ QString{} } // TODO: pass path to json
     , status_label{ new QLabel{ tr("Please wait for authorization") } }
     , file_path{}
     , choose_file_button{ new QPushButton{ tr("&Choose video to upload") } }
     , upload_button{ new QPushButton{ tr("&Upload") } }
+    , progress_dialog{ nullptr }
     , reply{ nullptr }
     , link_line( new QLineEdit{} )
 {
@@ -65,15 +67,16 @@ YoutubeModel::YoutubeModel(QWidget* parent)
 void
 YoutubeModel::uploadVideo(void)
 {
+    if (this->progress_dialog) { return; }
+
     this->reply = this->youtube.uploadVideo(QString{ this->file_path });
+    this->progress_dialog = new ProgressDialog(this->file_path, this);
     connect(this->reply, &QNetworkReply::finished, this, &YoutubeModel::uploadFinished);
 
-    ProgressDialog *progressDialog = new ProgressDialog(this->file_path, this);
-    progressDialog->setAttribute(Qt::WA_DeleteOnClose);
-    connect(progressDialog, &QProgressDialog::canceled, this, &YoutubeModel::cancelUpload);
-    connect(reply, &QNetworkReply::downloadProgress, progressDialog, &ProgressDialog::networkReplyProgress);
-    connect(reply, &QNetworkReply::finished, progressDialog, &ProgressDialog::hide);
-    progressDialog->show();
+    //progress_dialog->setAttribute(Qt::WA_DeleteOnClose);
+    connect(progress_dialog, &QProgressDialog::canceled, this, &YoutubeModel::cancelUpload);
+    connect(reply, &QNetworkReply::uploadProgress, progress_dialog, &ProgressDialog::networkReplyProgress);
+    //progress_dialog->show();
 
     status_label->setText(tr("Uploading %1...").arg(this->file_path));
 }
@@ -85,6 +88,7 @@ YoutubeModel::authorized(void)
 {
     this->choose_file_button->setEnabled(true);
     this->choose_file_button->setDefault(true);
+    this->status_label->setText(QString{ "Now you can choose a video to upload." });
 }
 
 //===================================================================================================================//
@@ -102,6 +106,7 @@ YoutubeModel::chooseVideo(void)
     {
         this->upload_button->setEnabled(true);
         this->upload_button->setDefault(true);
+        this->status_label->setText(QString{ "Press 'Upload' to proceed." });
     }
 }
 
@@ -120,24 +125,33 @@ YoutubeModel::cancelUpload(void)
 void
 YoutubeModel::uploadFinished(void)
 {
-    // TODO: display youtube URL
-    qInfo() << "Upload finished: " << static_cast<int>(reply->error());
+    auto dialog{ new QDialog{} };
+    auto layout{ new QVBoxLayout{} };
+    auto line{ new QLineEdit{ QString{ "Something's gone wrong" } } };
+    auto button = new QPushButton{ QString{ "Copy to clipboard" } };
+
+    line->setReadOnly(true);
+    layout->addWidget(line);
+
     if (reply->error() == QNetworkReply::NoError)
     {
-        qInfo() << reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toString().toLatin1();
         if (reply->open(QIODevice::ReadOnly))
         {
-            qInfo() << QString(reply->readAll()).toLatin1();
-        }
-        else
-        {
-            qInfo() << "cant open reply";
+            auto obj = QJsonDocument::fromJson(reply->readAll()).object();
+            auto id = obj.value("id");
+            if (QJsonValue::Undefined != id)
+            {
+                line->setText(QString{ "youtube.com/watch?v=" } + id.toString());
+                layout->addWidget(button);
+                connect(button, &QPushButton::pressed, [=]() { line->selectAll(); line->copy(); });
+            }
         }
     }
-    else
-    {
-        qInfo() << "not open";
-    }
+
+    delete this->progress_dialog; this->progress_dialog = nullptr;
+
+    dialog->setLayout(layout);
+    dialog->show();
 }
 
 //===================================================================================================================//

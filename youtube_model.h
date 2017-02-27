@@ -57,13 +57,14 @@ private slots:
     void disableControls(void);
 
 private:
-    YoutubeWrapper youtube;
-    QLabel*        status_label;
-    QString        file_path;
-    QPushButton*   choose_file_button;
-    QPushButton*   upload_button;
-    QNetworkReply* reply;
-    QLineEdit*     link_line;
+    YoutubeWrapper  youtube;
+    QLabel*         status_label;
+    QString         file_path;
+    QPushButton*    choose_file_button;
+    QPushButton*    upload_button;
+    ProgressDialog* progress_dialog;
+    QNetworkReply*  reply;
+    QLineEdit*      link_line;
 
 }; // YoutubeModel
 

@@ -1,5 +1,5 @@
 CONFIG += c++1z
-QT += widgets network networkauth
+QT += widgets network networkauth webenginewidgets
 SOURCES += \
     main.cpp \
     youtube_wrapper.cpp \

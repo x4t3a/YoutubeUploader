@@ -5,6 +5,9 @@
 #include <QtGui>
 #include <QtCore>
 #include <QtNetworkAuth>
+#include <QWebEngineView>
+#include <QWebEngineProfile>
+#include <QWebEngineCookieStore>
 
 //===================================================================================================================//
 
@@ -49,8 +52,12 @@ YoutubeWrapper::YoutubeWrapper(QObject* parent)
             if ((QAbstractOAuth::Stage::RequestingAuthorization == stage) && isPermanent())
             { parameters->insert("duration", "permanent"); }
         });
-
-    connect(&youtube, &QOAuth2AuthorizationCodeFlow::authorizeWithBrowser, &QDesktopServices::openUrl);
+    auto w = new QWebEngineView{};
+    w->show();
+    //w->page()->profile()->cookieStore()->deleteAllCookies();
+    connect(&youtube, &QOAuth2AuthorizationCodeFlow::authorizeWithBrowser, w, &QWebEngineView::load);
+    connect(&youtube, &QOAuth2AuthorizationCodeFlow::granted, w, &QWebEngineView::hide);
+    //connect(&youtube, &QOAuth2AuthorizationCodeFlow::authorizeWithBrowser, &QDesktopServices::openUrl);
 }
 
 //===================================================================================================================//
@@ -59,10 +66,10 @@ YoutubeWrapper::YoutubeWrapper(const QString& auth_file, QObject* parent)
     : YoutubeWrapper{ parent }
 {
     Q_UNUSED(auth_file);
-    youtube.setClientIdentifier(QString{ tr("848879698134-0m0eu67k9jlnu5p9rss1jlla530ossrh.apps.googleusercontent.com") });
+    youtube.setClientIdentifier(QString{ tr("848879698134-ef82i763ugir0v60nen0skv82cblsuf4.apps.googleusercontent.com") });
     youtube.setAuthorizationUrl(QString{ tr("https://accounts.google.com/o/oauth2/auth") });
     youtube.setAccessTokenUrl(QString{ tr("https://accounts.google.com/o/oauth2/token") });
-    youtube.setClientIdentifierSharedKey(QString{ tr("hYYsySJ3fqryHfZK4BOYjkdj") });
+    youtube.setClientIdentifierSharedKey(QString{ tr("-fRLiuzVU3cH1U1caa1Ne3Hc") });
 }
 
 //===================================================================================================================//
